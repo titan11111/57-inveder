@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インベーダーゲーム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>🚀 インベーダーゲーム 👾</h1>
+            <div class="score-board">
+                <span>スコア: <span id="score">0</span></span>
+                <span>ライフ: <span id="lives">3</span></span>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+        
+        <div class="controls">
+            <button id="leftBtn" class="control-btn">←</button>
+            <button id="shootBtn" class="control-btn shoot">🚀</button>
+            <button id="rightBtn" class="control-btn">→</button>
+        </div>
+        
+        <div class="game-info">
+            <p>操作方法：</p>
+            <p>パソコン：←→キーで移動、スペースで発射</p>
+            <p>スマホ：画面下のボタンで操作</p>
+        </div>
+        
+        <div id="gameOver" class="game-over hidden">
+            <h2>ゲームオーバー</h2>
+            <p>最終スコア: <span id="finalScore">0</span></p>
+            <button id="restartBtn" class="restart-btn">もう一度プレイ</button>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
