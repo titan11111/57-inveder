@@ -30,13 +30,15 @@ function initGame() {
     invaders = [];
     for (let row = 0; row < 5; row++) {
         for (let col = 0; col < 8; col++) {
+            const isFast = row === 0; // 最上段の敵は高速で移動
             invaders.push({
                 x: col * 45 + 50,
                 y: row * 35 + 50,
                 width: 25,
                 height: 20,
                 alive: true,
-                color: row < 2 ? '#ff0000' : row < 4 ? '#ffff00' : '#00ffff'
+                speedMultiplier: isFast ? 2 : 1,
+                color: isFast ? '#ff00ff' : row < 2 ? '#ff0000' : row < 4 ? '#ffff00' : '#00ffff'
             });
         }
     }
@@ -140,7 +142,7 @@ function moveInvaders() {
     // 横移動
     invaders.forEach(invader => {
         if (invader.alive) {
-            invader.x += invaderSpeed * invaderDirection;
+            invader.x += invaderSpeed * invaderDirection * (invader.speedMultiplier || 1);
         }
     });
 }
