@@ -300,34 +300,70 @@ document.addEventListener('keydown', (e) => {
 });
 
 // タッチボタン操作
-document.getElementById('leftBtn').addEventListener('touchstart', (e) => {
+let moveInterval;
+function startMoving(direction) {
+    movePlayer(direction);
+    moveInterval = setInterval(() => movePlayer(direction), 100);
+}
+function stopMoving() {
+    clearInterval(moveInterval);
+}
+
+let shootInterval;
+function startShooting() {
+    shoot();
+    shootInterval = setInterval(shoot, 200);
+}
+function stopShooting() {
+    clearInterval(shootInterval);
+}
+
+const leftBtn = document.getElementById('leftBtn');
+leftBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (gameRunning) movePlayer('left');
+    if (gameRunning) startMoving('left');
+});
+leftBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    if (gameRunning) startMoving('left');
+});
+['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(evt => {
+    leftBtn.addEventListener(evt, (e) => {
+        e.preventDefault();
+        stopMoving();
+    });
 });
 
-document.getElementById('leftBtn').addEventListener('click', (e) => {
+const rightBtn = document.getElementById('rightBtn');
+rightBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (gameRunning) movePlayer('left');
+    if (gameRunning) startMoving('right');
+});
+rightBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    if (gameRunning) startMoving('right');
+});
+['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(evt => {
+    rightBtn.addEventListener(evt, (e) => {
+        e.preventDefault();
+        stopMoving();
+    });
 });
 
-document.getElementById('rightBtn').addEventListener('touchstart', (e) => {
+const shootBtn = document.getElementById('shootBtn');
+shootBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (gameRunning) movePlayer('right');
+    if (gameRunning) startShooting();
 });
-
-document.getElementById('rightBtn').addEventListener('click', (e) => {
+shootBtn.addEventListener('mousedown', (e) => {
     e.preventDefault();
-    if (gameRunning) movePlayer('right');
+    if (gameRunning) startShooting();
 });
-
-document.getElementById('shootBtn').addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    if (gameRunning) shoot();
-});
-
-document.getElementById('shootBtn').addEventListener('click', (e) => {
-    e.preventDefault();
-    if (gameRunning) shoot();
+['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(evt => {
+    shootBtn.addEventListener(evt, (e) => {
+        e.preventDefault();
+        stopShooting();
+    });
 });
 
 // リスタートボタン
