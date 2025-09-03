@@ -58,12 +58,18 @@ body {
     aspect-ratio: 400/600;
 }
 
-.controls {
-    margin: 20px 0;
+.move-controls {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
     display: flex;
-    justify-content: center;
     gap: 20px;
-    flex-wrap: wrap;
+}
+
+.shoot-control {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
 }
 
 .control-btn {
@@ -79,15 +85,16 @@ body {
     box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    transform: scale(1.1);
 }
 
 .control-btn:hover {
-    transform: translateY(-2px);
+    transform: scale(1.1) translateY(-2px);
     box-shadow: 0 7px 20px rgba(0, 255, 0, 0.5);
 }
 
 .control-btn:active {
-    transform: translateY(0);
+    transform: scale(1.1);
     box-shadow: 0 3px 10px rgba(0, 255, 0, 0.3);
 }
 
@@ -185,7 +192,7 @@ body {
         padding: 10px 15px;
     }
     
-    .controls {
+    .move-controls {
         gap: 15px;
     }
     
