@@ -81,20 +81,20 @@ body {
     padding: 15px 25px;
     border-radius: 15px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.15s ease;
     box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    transform: scale(1.1);
+    transform: scale(1.2);
 }
 
 .control-btn:hover {
-    transform: scale(1.1) translateY(-2px);
+    transform: scale(1.2) translateY(-2px);
     box-shadow: 0 7px 20px rgba(0, 255, 0, 0.5);
 }
 
 .control-btn:active {
-    transform: scale(1.1);
+    transform: scale(1.2);
     box-shadow: 0 3px 10px rgba(0, 255, 0, 0.3);
 }
 
@@ -150,11 +150,12 @@ body {
     padding: 15px 30px;
     border-radius: 10px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.15s ease;
+    transform: scale(1.2);
 }
 
 .restart-btn:hover {
-    transform: scale(1.05);
+    transform: scale(1.25);
 }
 
 .hidden {

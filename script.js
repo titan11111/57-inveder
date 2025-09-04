@@ -303,7 +303,7 @@ document.addEventListener('keydown', (e) => {
 let moveInterval;
 function startMoving(direction) {
     movePlayer(direction);
-    moveInterval = setInterval(() => movePlayer(direction), 100);
+    moveInterval = setInterval(() => movePlayer(direction), 50);
 }
 function stopMoving() {
     clearInterval(moveInterval);
@@ -312,7 +312,7 @@ function stopMoving() {
 let shootInterval;
 function startShooting() {
     shoot();
-    shootInterval = setInterval(shoot, 200);
+    shootInterval = setInterval(shoot, 100);
 }
 function stopShooting() {
     clearInterval(shootInterval);
