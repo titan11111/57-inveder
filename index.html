@@ -81,6 +81,14 @@
       z-index:1100; font-size:1.05em; white-space:pre-line;
     }
 
+    /* エンディング演出 */
+    #ending{ animation: fadeIn .6s ease both; }
+    @keyframes fadeIn{
+      from{ opacity:0; transform:scale(.98); }
+      to{ opacity:1; transform:scale(1); }
+    }
+    #fireworks{ width:100%; max-width:400px; height:auto; border-radius:10px; }
+
     @media (max-width:768px){
       .game-header h1{ font-size:1.7em; }
       .score-board{ font-size:.95em; padding:8px 12px; }
@@ -137,12 +145,13 @@
       <button id="restartBtn" class="btn">もう一度プレイ</button>
     </div>
 
-    <!-- エンディング -->
+    <!-- エンディング（盛り上げ版） -->
     <div id="ending" class="overlay hidden">
-      <h2>エンディング</h2>
-      <p>皆さん、お疲れさまでした</p>
-      <p>スコア: <span id="clearScore">0</span></p>
-      <button id="toTitleBtn" class="btn">タイトルへ</button>
+      <h2 style="color:#00ffcc; text-shadow:0 0 25px #00ffff;">🎉 CONGRATULATIONS 🎉</h2>
+      <p style="font-size:1.25em;">あなたは全てを守った！</p>
+      <canvas id="fireworks" width="400" height="220"></canvas>
+      <p style="margin-top:12px;">最終スコア: <span id="clearScore" style="font-size:1.4em; color:#ff0;"></span></p>
+      <button id="toTitleBtn" class="btn">タイトルへ戻る</button>
     </div>
   </div>
 
@@ -158,7 +167,7 @@
       if(audioCtx.state === 'suspended'){ audioCtx.resume(); }
     }
 
-    // 発射：明るい上昇ピコ音（square）
+    // 発射：明るい上昇ピコ音
     function playShoot(){
       if(!audioCtx) return;
       const now = audioCtx.currentTime;
@@ -173,7 +182,7 @@
       osc.start(now); osc.stop(now + 0.13);
     }
 
-    // 爆発：やわらかい「ボフッ」ノイズ（lowpassで丸める）
+    // 爆発：やわらかい「ボフッ」
     function playExplosion(){
       if(!audioCtx) return;
       const now = audioCtx.currentTime, dur = 0.28;
@@ -192,7 +201,7 @@
       src.start(now); src.stop(now+dur);
     }
 
-    // BGM：ステージごとにポップな三和音アルペジオ（square）
+    // BGM（ステージごとに簡単アルペジオ）
     let bgmOsc = null, bgmGain = null, bgmTimer = null;
     function startBgm(){
       if(!audioCtx) return;
@@ -217,7 +226,7 @@
         if(!audioCtx || !bgmOsc) return;
         bgmOsc.frequency.setValueAtTime(seq[step % seq.length], audioCtx.currentTime);
         step++;
-      }, 180); // 0.18秒ごと
+      }, 180);
     }
     function stopBgm(){
       if(bgmTimer){ clearInterval(bgmTimer); bgmTimer=null; }
@@ -225,11 +234,11 @@
       if(bgmGain){ bgmGain.disconnect(); bgmGain=null; }
     }
 
-    // ステージクリア：明るい上昇ジングル
+    // ステージクリアジングル
     function playStageClearJingle(){
       if(!audioCtx) return;
       const now = audioCtx.currentTime;
-      const notes = [784, 880, 988, 1175]; // G5-A5-B5-D6
+      const notes = [784, 880, 988, 1175];
       notes.forEach((f,i)=>{
         const o = audioCtx.createOscillator(), g = audioCtx.createGain();
         o.type='square'; o.frequency.value=f;
@@ -238,6 +247,29 @@
         g.gain.exponentialRampToValueAtTime(0.01, t+0.07);
         o.connect(g).connect(audioCtx.destination);
         o.start(t); o.stop(t+0.08);
+      });
+    }
+
+    // 勝利ジングル（エンディング）
+    function playVictory(){
+      if(!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const chords = [
+        [523.25,659.25,783.99], // C-E-G
+        [587.33,739.99,880.00], // D-F#-A
+        [659.25,783.99,987.77], // E-G-B
+        [783.99,987.77,1174.66] // G-B-D (高)
+      ];
+      chords.forEach((ch,i)=>{
+        const t = now + i*0.28;
+        ch.forEach(f=>{
+          const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+          o.type='square'; o.frequency.value=f;
+          g.gain.setValueAtTime(0.06, t);
+          g.gain.exponentialRampToValueAtTime(0.01, t+0.24);
+          o.connect(g).connect(audioCtx.destination);
+          o.start(t); o.stop(t+0.26);
+        });
       });
     }
 
@@ -253,12 +285,62 @@
     }
 
     // =========================
+    // 花火演出（エンディング）
+    // =========================
+    let fwParticles = [], fwRAF = null, fwInterval = null, fwCtx = null, fwCanvas = null;
+    function startFireworks(){
+      fwCanvas = document.getElementById('fireworks');
+      const mainW = document.getElementById('gameCanvas').clientWidth || 400;
+      fwCanvas.width  = Math.min(400, mainW);
+      fwCanvas.height = Math.round(fwCanvas.width * 0.55);
+      fwCtx = fwCanvas.getContext('2d');
+      fwParticles = [];
+
+      function spawn(){
+        const x = Math.random()*fwCanvas.width;
+        const y = Math.random()*fwCanvas.height*0.5 + fwCanvas.height*0.1;
+        for(let i=0;i<60;i++){
+          fwParticles.push({
+            x,y,
+            vx:(Math.random()-0.5)*4.5,
+            vy:(Math.random()-0.5)*4.5,
+            life:60,
+            color:`hsl(${(Math.random()*360)|0},100%,60%)`
+          });
+        }
+      }
+      function loop(){
+        fwCtx.clearRect(0,0,fwCanvas.width,fwCanvas.height);
+        fwParticles.forEach(p=>{
+          fwCtx.fillStyle = p.color;
+          fwCtx.fillRect(p.x,p.y,2,2);
+          p.x += p.vx; p.y += p.vy;
+          p.vy += 0.02; // 重力
+          p.life--;
+        });
+        fwParticles = fwParticles.filter(p=>p.life>0);
+        fwRAF = requestAnimationFrame(loop);
+      }
+      fwInterval = setInterval(spawn, 900);
+      spawn();
+      loop();
+    }
+    function stopFireworks(){
+      if(fwInterval){ clearInterval(fwInterval); fwInterval=null; }
+      if(fwRAF){ cancelAnimationFrame(fwRAF); fwRAF=null; }
+      fwParticles = [];
+      if(fwCtx && fwCanvas){ fwCtx.clearRect(0,0,fwCanvas.width,fwCanvas.height); }
+    }
+
+    // =========================
     // ゲーム本体
     // =========================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
     let gameRunning = false;
+    let stageTransitioning = false;
+
     let score = 0;
     let lives = 3;
 
@@ -336,19 +418,15 @@
     // 背景描画
     function drawBackground(now){
       if(currentStage === 1){
-        // 地球
         const g = ctx.createLinearGradient(0,0,0,canvas.height);
         g.addColorStop(0,'#5ec8ff'); g.addColorStop(.5,'#9be1ff'); g.addColorStop(1,'#1a6fb0');
         ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
-        // 地平線・山
         ctx.fillStyle = '#1d4d2b'; ctx.fillRect(0, canvas.height-120, canvas.width, 120);
         ctx.fillStyle = '#27653a'; drawTriangle(40, canvas.height-120, 160, canvas.height-220, 280, canvas.height-120);
         ctx.fillStyle = '#1f5631'; drawTriangle(200, canvas.height-120, 300, canvas.height-210, 420, canvas.height-120);
-        // 雲
         ctx.fillStyle = 'rgba(255,255,255,.9)';
         clouds.forEach(c=>{ c.x += c.spd; if(c.x - c.w/2 > canvas.width) c.x = -c.w; drawCloud(c.x, c.y, c.w, c.h); });
       }else if(currentStage === 2){
-        // 宇宙
         const g = ctx.createRadialGradient(canvas.width/2,canvas.height*0.3,40, canvas.width/2,canvas.height*0.3, 500);
         g.addColorStop(0,'#101030'); g.addColorStop(1,'#000010');
         ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -358,7 +436,6 @@
         ctx.beginPath(); ctx.ellipse(canvas.width*0.7, canvas.height*0.25, 90, 28, 0.3, 0, Math.PI*2); ctx.fillStyle='#a9b8ff'; ctx.fill();
         ctx.globalAlpha = 1;
       }else{
-        // 異世界
         const g = ctx.createLinearGradient(0,0,0,canvas.height);
         g.addColorStop(0,'#3a0058'); g.addColorStop(.5,'#4d0e6e'); g.addColorStop(1,'#12001e');
         ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -416,6 +493,7 @@
 
     // 敵攻撃
     function enemyShoot(){
+      if(stageTransitioning) return;
       if(Math.random() < enemyFireProb){
         const alive = invaders.filter(i=>i.alive);
         if(alive.length){
@@ -427,6 +505,7 @@
 
     // 衝突
     function checkCollisions(){
+      if(stageTransitioning) return;
       // 自弾 vs 敵
       bullets.forEach((b,bi)=>{
         invaders.forEach(inv=>{
@@ -453,11 +532,17 @@
       invaders.forEach(inv=>{ if(inv.alive && inv.y + inv.height >= player.y) gameOver(); });
     }
 
-    // 勝利判定
+    // 勝利判定（多重判定防止）
     function checkWin(){
+      if(stageTransitioning) return;
       if(invaders.some(i=>i.alive)) return;
+
+      stageTransitioning = true;
       score += 100; updateDisplay();
       playStageClearJingle();
+
+      bullets = []; enemyBullets = [];
+
       if(currentStage < maxStages){
         currentStage++;
         setupDifficultyForStage();
@@ -465,10 +550,12 @@
           initStageOnly();
           showStageBanner();
           showMessage('……次の世界です');
-          startBgm(); // ステージに合わせてBGMのコード進行も更新
+          startBgm();             // ステージに合わせて更新
+          stageTransitioning = false;
         }, 700);
-      }else{
+      } else {
         showEnding();
+        stageTransitioning = false;
       }
     }
 
@@ -484,26 +571,27 @@
 
     // 入力
     function movePlayer(dir){
+      if(!gameRunning || stageTransitioning) return;
       if(dir==='left' && player.x>0) player.x -= player.speed;
       if(dir==='right'&& player.x<canvas.width-player.width) player.x += player.speed;
     }
     function shoot(){
+      if(!gameRunning || stageTransitioning) return;
       if(bullets.length < 3){
         bullets.push({ x: player.x + player.width/2 - 2, y: player.y, width:4, height:10, speed:8 });
         playShoot();
       }
     }
     document.addEventListener('keydown', e=>{
-      if(!gameRunning) return;
       if(e.code==='ArrowLeft')  movePlayer('left');
       if(e.code==='ArrowRight') movePlayer('right');
       if(e.code==='Space'){ e.preventDefault(); shoot(); }
     });
 
     let moveInterval, shootInterval;
-    function startMoving(d){ movePlayer(d); moveInterval = setInterval(()=>movePlayer(d), 50); }
+    function startMoving(d){ if(!gameRunning||stageTransitioning) return; movePlayer(d); moveInterval = setInterval(()=>movePlayer(d), 50); }
     function stopMoving(){ clearInterval(moveInterval); }
-    function startShooting(){ shoot(); shootInterval = setInterval(shoot, 120); }
+    function startShooting(){ if(!gameRunning||stageTransitioning) return; shoot(); shootInterval = setInterval(shoot, 120); }
     function stopShooting(){ clearInterval(shootInterval); }
 
     const leftBtn  = document.getElementById('leftBtn');
@@ -511,9 +599,9 @@
     const shootBtn = document.getElementById('shootBtn');
 
     ['mousedown','touchstart'].forEach(ev=>{
-      leftBtn .addEventListener(ev, e=>{ e.preventDefault(); if(gameRunning) startMoving('left'); });
-      rightBtn.addEventListener(ev, e=>{ e.preventDefault(); if(gameRunning) startMoving('right'); });
-      shootBtn.addEventListener(ev, e=>{ e.preventDefault(); if(gameRunning) startShooting(); });
+      leftBtn .addEventListener(ev, e=>{ e.preventDefault(); startMoving('left'); });
+      rightBtn.addEventListener(ev, e=>{ e.preventDefault(); startMoving('right'); });
+      shootBtn.addEventListener(ev, e=>{ e.preventDefault(); startShooting(); });
     });
     ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>{
       leftBtn .addEventListener(ev, e=>{ e.preventDefault(); stopMoving(); });
@@ -544,11 +632,12 @@
       openingEl.classList.remove('hidden');
       gameRunning = false;
       stopBgm();
+      stopFireworks();
     });
 
     function startGame(){
-      // 初期化
       score = 0; lives = 3; currentStage = 1; invaderDirection = 1;
+      stageTransitioning = false;
       updateDisplay();
       setupDifficultyForStage();
       initStageOnly();
@@ -582,6 +671,7 @@
 
     function gameOver(){
       gameRunning = false;
+      stageTransitioning = false;
       document.getElementById('finalScore').textContent = score;
       gameOverEl.classList.remove('hidden');
       stopBgm();
@@ -589,9 +679,12 @@
 
     function showEnding(){
       gameRunning = false;
+      stageTransitioning = false;
       document.getElementById('clearScore').textContent = score;
       endingEl.classList.remove('hidden');
       stopBgm();
+      playVictory();
+      startFireworks();
     }
   </script>
 </body>
