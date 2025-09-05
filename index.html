@@ -1,45 +1,598 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>インベーダーゲーム</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>インベーダーゲーム</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      font-family: Arial, system-ui, sans-serif;
+      background: linear-gradient(135deg,#0f0f23 0%,#1a1a3a 100%);
+      color:#fff;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:10px;
+    }
+    .game-container{ text-align:center; max-width:500px; width:100%; position:relative; }
+    .game-header{ margin-bottom:20px; }
+    .game-header h1{
+      font-size:2.0em;margin-bottom:12px;text-shadow:0 0 20px #00ff00;
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+    @keyframes glow{
+      from{ text-shadow:0 0 20px #00ff00; }
+      to  { text-shadow:0 0 30px #00ff00, 0 0 40px #00ff00; }
+    }
+    .score-board{
+      display:flex; justify-content:space-between; gap:10px;
+      background: rgba(255,255,255,.1); padding:10px 14px; border-radius:10px;
+      font-weight:bold; font-size:1.05em;
+    }
+    #gameCanvas{
+      background:#000011;border:3px solid #00ff00;border-radius:10px;
+      box-shadow:0 0 30px rgba(0,255,0,.3);
+      width:100%; max-width:400px; height:auto; aspect-ratio:400/600;
+    }
+
+    .move-controls{ position:fixed; bottom:20px; left:20px; display:flex; gap:20px; z-index:10; }
+    .shoot-control{ position:fixed; bottom:20px; right:20px; z-index:10; }
+
+    .control-btn{
+      background:linear-gradient(45deg,#00ff00,#00cc00); border:none; color:#000;
+      font-size:2em; font-weight:bold; padding:14px 22px; border-radius:15px;
+      cursor:pointer; transition:.15s; box-shadow:0 5px 15px rgba(0,255,0,.3);
+      user-select:none; -webkit-tap-highlight-color:transparent; transform:scale(1.2);
+    }
+    .control-btn:hover{ transform:scale(1.2) translateY(-2px); box-shadow:0 7px 20px rgba(0,255,0,.5); }
+    .control-btn:active{ transform:scale(1.2); box-shadow:0 3px 10px rgba(0,255,0,.3); }
+
+    .shoot{ background:linear-gradient(45deg,#ff6600,#ff4400); box-shadow:0 5px 15px rgba(255,102,0,.3); }
+    .shoot:hover{ box-shadow:0 7px 20px rgba(255,102,0,.5); }
+
+    .game-info{
+      background: rgba(255,255,255,.1); padding:12px; border-radius:10px; margin-top:14px;
+      font-size:.9em; line-height:1.5;
+    }
+
+    /* オーバーレイ（タイトル/ゲームオーバー/エンディング） */
+    .overlay{
+      position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      background: rgba(0,0,0,.85); border:3px solid #00ff99; border-radius:20px; padding:32px 20px; gap:16px;
+      box-shadow:0 0 50px rgba(0,255,153,.3); z-index:1000;
+    }
+    .overlay h2{ font-size:2.0em; text-shadow:0 0 20px #00ffcc; margin-bottom:4px; }
+    .overlay p{ font-size:1.1em; opacity:.9; }
+    .overlay .btn{
+      background:linear-gradient(45deg,#00ffcc,#00cc88); color:#002a22; border:none; padding:14px 28px;
+      border-radius:12px; font-weight:bold; font-size:1.1em; cursor:pointer; transition:.15s; transform:scale(1.1);
+    }
+    .overlay .btn:hover{ transform:scale(1.15); }
+    .overlay .btn:active{ transform:scale(1.1); }
+
+    .hidden{ display:none !important; }
+
+    /* ステージバナー／会話 */
+    .stage-banner{
+      position:absolute; top:14px; left:50%; transform:translateX(-50%);
+      background:rgba(0,0,0,.6); padding:6px 12px; border:2px solid #00ff99; border-radius:10px;
+      font-weight:bold; letter-spacing:.08em; z-index:20;
+    }
+    .message{
+      position:absolute; bottom:16%; left:50%; transform:translateX(-50%);
+      background:rgba(0,0,0,.7); padding:10px 16px; border-radius:10px; border:1px solid #00ff99;
+      z-index:1100; font-size:1.05em; white-space:pre-line;
+    }
+
+    @media (max-width:768px){
+      .game-header h1{ font-size:1.7em; }
+      .score-board{ font-size:.95em; padding:8px 12px; }
+      .control-btn{ font-size:1.7em; padding:12px 18px; }
+      .overlay h2{ font-size:1.7em; }
+    }
+    @media (max-width:480px){
+      .control-btn{ font-size:1.4em; padding:10px 14px; }
+      .move-controls{ gap:14px; }
+    }
+  </style>
 </head>
 <body>
-    <div class="game-container">
-        <div class="game-header">
-            <h1>🚀 インベーダーゲーム 👾</h1>
-            <div class="score-board">
-                <span>スコア: <span id="score">0</span></span>
-                <span>ライフ: <span id="lives">3</span></span>
-            </div>
-        </div>
-        
-        <canvas id="gameCanvas" width="400" height="600"></canvas>
-
-        <div class="move-controls">
-            <button id="leftBtn" class="control-btn">←</button>
-            <button id="rightBtn" class="control-btn">→</button>
-        </div>
-        <div class="shoot-control">
-            <button id="shootBtn" class="control-btn shoot">🚀</button>
-        </div>
-
-        <div class="game-info">
-            <p>操作方法：</p>
-            <p>パソコン：←→キーで移動、スペースで発射</p>
-            <p>スマホ：画面下のボタンで操作</p>
-            <p>紫色の敵は通常よりも速く動きます</p>
-        </div>
-        
-        <div id="gameOver" class="game-over hidden">
-            <h2>ゲームオーバー</h2>
-            <p>最終スコア: <span id="finalScore">0</span></p>
-            <button id="restartBtn" class="restart-btn">もう一度プレイ</button>
-        </div>
+  <div class="game-container">
+    <div class="game-header">
+      <h1>🚀 インベーダーゲーム 👾</h1>
+      <div class="score-board">
+        <span>スコア: <span id="score">0</span></span>
+        <span>ライフ: <span id="lives">3</span></span>
+        <span>ステージ: <span id="stage">1</span>/3</span>
+      </div>
     </div>
-    
-    <script src="script.js"></script>
+
+    <div id="stageBanner" class="stage-banner hidden">STAGE 1</div>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+    <!-- 操作ボタン（モバイル向け） -->
+    <div class="move-controls">
+      <button id="leftBtn"  class="control-btn">←</button>
+      <button id="rightBtn" class="control-btn">→</button>
+    </div>
+    <div class="shoot-control">
+      <button id="shootBtn" class="control-btn shoot">🚀</button>
+    </div>
+
+    <div class="game-info">
+      <p>操作方法：</p>
+      <p>PC：←→で移動、スペースで発射</p>
+      <p>スマホ：画面下ボタンで操作</p>
+      <p>紫の敵は高速です。全滅で次ステージ。</p>
+    </div>
+
+    <!-- オープニング -->
+    <div id="opening" class="overlay">
+      <h2>オープニング</h2>
+      <p>フミさん、敵が来ました</p>
+      <button id="startBtn" class="btn">PRESS START</button>
+    </div>
+
+    <!-- ゲームオーバー -->
+    <div id="gameOver" class="overlay hidden">
+      <h2 style="color:#ff4d4d;text-shadow:0 0 20px #ff0000">ゲームオーバー</h2>
+      <p>最終スコア: <span id="finalScore">0</span></p>
+      <button id="restartBtn" class="btn">もう一度プレイ</button>
+    </div>
+
+    <!-- エンディング -->
+    <div id="ending" class="overlay hidden">
+      <h2>エンディング</h2>
+      <p>皆さん、お疲れさまでした</p>
+      <p>スコア: <span id="clearScore">0</span></p>
+      <button id="toTitleBtn" class="btn">タイトルへ</button>
+    </div>
+  </div>
+
+  <script>
+    // =========================
+    // Web Audio API（iPhone対応／ポップな音）
+    // =========================
+    let audioCtx = null;
+    function initAudio(){
+      if(!audioCtx){
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if(audioCtx.state === 'suspended'){ audioCtx.resume(); }
+    }
+
+    // 発射：明るい上昇ピコ音（square）
+    function playShoot(){
+      if(!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(620, now);
+      osc.frequency.linearRampToValueAtTime(1240, now + 0.12);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.13);
+    }
+
+    // 爆発：やわらかい「ボフッ」ノイズ（lowpassで丸める）
+    function playExplosion(){
+      if(!audioCtx) return;
+      const now = audioCtx.currentTime, dur = 0.28;
+      const bufferSize = Math.floor(audioCtx.sampleRate * dur);
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i=0;i<bufferSize;i++){ data[i] = (Math.random()*2-1) * (1 - i/bufferSize); }
+      const src = audioCtx.createBufferSource(); src.buffer = buffer;
+      const filter = audioCtx.createBiquadFilter(); filter.type='lowpass';
+      filter.frequency.setValueAtTime(900, now);
+      filter.frequency.exponentialRampToValueAtTime(350, now+dur);
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now+dur);
+      src.connect(filter).connect(gain).connect(audioCtx.destination);
+      src.start(now); src.stop(now+dur);
+    }
+
+    // BGM：ステージごとにポップな三和音アルペジオ（square）
+    let bgmOsc = null, bgmGain = null, bgmTimer = null;
+    function startBgm(){
+      if(!audioCtx) return;
+      stopBgm();
+      bgmGain = audioCtx.createGain();
+      bgmGain.gain.value = 0.04;
+      bgmGain.connect(audioCtx.destination);
+
+      bgmOsc = audioCtx.createOscillator();
+      bgmOsc.type = 'square';
+      bgmOsc.connect(bgmGain);
+      bgmOsc.start();
+
+      const seqs = {
+        1: [261.63,329.63,392.00,329.63,392.00,329.63,261.63,329.63], // C-E-G
+        2: [349.23,440.00,523.25,440.00,523.25,440.00,349.23,392.00], // F-A-C
+        3: [392.00,493.88,587.33,493.88,587.33,493.88,392.00,440.00]  // G-B-D
+      };
+      let step = 0;
+      const seq = seqs[currentStage] || seqs[1];
+      bgmTimer = setInterval(()=>{
+        if(!audioCtx || !bgmOsc) return;
+        bgmOsc.frequency.setValueAtTime(seq[step % seq.length], audioCtx.currentTime);
+        step++;
+      }, 180); // 0.18秒ごと
+    }
+    function stopBgm(){
+      if(bgmTimer){ clearInterval(bgmTimer); bgmTimer=null; }
+      if(bgmOsc){ try{bgmOsc.stop();}catch{} bgmOsc.disconnect(); bgmOsc=null; }
+      if(bgmGain){ bgmGain.disconnect(); bgmGain=null; }
+    }
+
+    // ステージクリア：明るい上昇ジングル
+    function playStageClearJingle(){
+      if(!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const notes = [784, 880, 988, 1175]; // G5-A5-B5-D6
+      notes.forEach((f,i)=>{
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type='square'; o.frequency.value=f;
+        const t = now + i*0.08;
+        g.gain.setValueAtTime(0.08, t);
+        g.gain.exponentialRampToValueAtTime(0.01, t+0.07);
+        o.connect(g).connect(audioCtx.destination);
+        o.start(t); o.stop(t+0.08);
+      });
+    }
+
+    // =========
+    // 会話演出
+    // =========
+    function showMessage(text, ms=2000){
+      const msg = document.createElement('div');
+      msg.className = 'message';
+      msg.textContent = text;
+      document.querySelector('.game-container').appendChild(msg);
+      setTimeout(()=>msg.remove(), ms);
+    }
+
+    // =========================
+    // ゲーム本体
+    // =========================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let gameRunning = false;
+    let score = 0;
+    let lives = 3;
+
+    let currentStage = 1;
+    const maxStages = 3;
+
+    let invaderDirection = 1;
+    let invaderSpeed = 0.6;
+    let enemyBulletSpeed = 1.8;
+    let enemyFireProb = 0.001;
+
+    let bullets = [];
+    let enemyBullets = [];
+    let invaders = [];
+
+    // 背景素材
+    let clouds = []; // 地球
+    let stars = [];  // 宇宙
+    let orbs  = [];  // 異世界
+    let stageBannerUntil = 0;
+
+    const player = { x: canvas.width/2 - 15, y: canvas.height - 60, width: 30, height: 20, speed: 10, color:'#00ff00' };
+
+    // UI
+    function updateDisplay(){
+      document.getElementById('score').textContent = score;
+      document.getElementById('lives').textContent = lives;
+      document.getElementById('stage').textContent = currentStage;
+    }
+    function showStageBanner(){
+      const el = document.getElementById('stageBanner');
+      el.textContent = `STAGE ${currentStage}`;
+      el.classList.remove('hidden');
+      stageBannerUntil = performance.now() + 1500;
+    }
+    function maybeHideStageBanner(now){
+      if(now >= stageBannerUntil){
+        document.getElementById('stageBanner').classList.add('hidden');
+      }
+    }
+
+    // 難易度・背景
+    function setupDifficultyForStage(){
+      invaderSpeed      = 0.6 + 0.25*(currentStage-1);
+      enemyBulletSpeed  = 1.8 + 0.4*(currentStage-1);
+      enemyFireProb     = 0.001 + 0.00035*(currentStage-1);
+    }
+    function prepareStageBackground(){
+      if(currentStage === 1){
+        clouds = Array.from({length:6},()=>({
+          x: Math.random()*canvas.width,
+          y: Math.random()*180 + 10,
+          w: 60 + Math.random()*70,
+          h: 20 + Math.random()*12,
+          spd: 0.2 + Math.random()*0.3
+        }));
+      }else if(currentStage === 2){
+        stars = Array.from({length:80},()=>({
+          x: Math.random()*canvas.width,
+          y: Math.random()*canvas.height,
+          r: Math.random()*1.5 + 0.5,
+          spd: 0.15 + Math.random()*0.25
+        }));
+      }else{
+        orbs = Array.from({length:10},(_,i)=>({
+          x: (i+1)*(canvas.width/11),
+          baseY: 120 + (i%2)*60,
+          amp: 18 + Math.random()*20,
+          rx: 20 + Math.random()*25,
+          ry: 10 + Math.random()*14,
+        }));
+      }
+    }
+
+    // 背景描画
+    function drawBackground(now){
+      if(currentStage === 1){
+        // 地球
+        const g = ctx.createLinearGradient(0,0,0,canvas.height);
+        g.addColorStop(0,'#5ec8ff'); g.addColorStop(.5,'#9be1ff'); g.addColorStop(1,'#1a6fb0');
+        ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
+        // 地平線・山
+        ctx.fillStyle = '#1d4d2b'; ctx.fillRect(0, canvas.height-120, canvas.width, 120);
+        ctx.fillStyle = '#27653a'; drawTriangle(40, canvas.height-120, 160, canvas.height-220, 280, canvas.height-120);
+        ctx.fillStyle = '#1f5631'; drawTriangle(200, canvas.height-120, 300, canvas.height-210, 420, canvas.height-120);
+        // 雲
+        ctx.fillStyle = 'rgba(255,255,255,.9)';
+        clouds.forEach(c=>{ c.x += c.spd; if(c.x - c.w/2 > canvas.width) c.x = -c.w; drawCloud(c.x, c.y, c.w, c.h); });
+      }else if(currentStage === 2){
+        // 宇宙
+        const g = ctx.createRadialGradient(canvas.width/2,canvas.height*0.3,40, canvas.width/2,canvas.height*0.3, 500);
+        g.addColorStop(0,'#101030'); g.addColorStop(1,'#000010');
+        ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = '#ffffff';
+        stars.forEach(s=>{ ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill(); s.y += s.spd; if(s.y>canvas.height){ s.y=-2; s.x=Math.random()*canvas.width; }});
+        ctx.globalAlpha = 0.25;
+        ctx.beginPath(); ctx.ellipse(canvas.width*0.7, canvas.height*0.25, 90, 28, 0.3, 0, Math.PI*2); ctx.fillStyle='#a9b8ff'; ctx.fill();
+        ctx.globalAlpha = 1;
+      }else{
+        // 異世界
+        const g = ctx.createLinearGradient(0,0,0,canvas.height);
+        g.addColorStop(0,'#3a0058'); g.addColorStop(.5,'#4d0e6e'); g.addColorStop(1,'#12001e');
+        ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
+        for(let i=0;i<6;i++){ const alpha = 0.08 + i*0.02; ctx.fillStyle = `rgba(255,80,180,${alpha})`; ctx.fillRect(0, canvas.height-80 - i*8, canvas.width, 6); }
+        ctx.fillStyle = '#f7b3ff';
+        orbs.forEach((o,idx)=>{ const y = o.baseY + Math.sin((now/600)+(idx*0.7))*o.amp;
+          ctx.beginPath(); ctx.ellipse(o.x, y, o.rx, o.ry, 0, 0, Math.PI*2); ctx.fill();
+          ctx.globalAlpha=.25; ctx.beginPath(); ctx.ellipse(o.x, y, o.rx+8, o.ry+6, 0, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha=1; });
+      }
+    }
+    function drawTriangle(x1,y1,x2,y2,x3,y3){ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineTo(x3,y3); ctx.closePath(); ctx.fill(); }
+    function drawCloud(x,y,w,h){
+      ctx.beginPath();
+      ctx.ellipse(x-w*0.25, y, w*0.3, h*0.6, 0, 0, Math.PI*2);
+      ctx.ellipse(x,         y-4, w*0.35, h*0.75, 0, 0, Math.PI*2);
+      ctx.ellipse(x+w*0.25,  y, w*0.3, h*0.6, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // 前景
+    function drawPlayer(){
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+      ctx.fillRect(player.x+10, player.y-5, 10, 5);
+    }
+    function drawInvaders(){
+      invaders.forEach(inv=>{
+        if(inv.alive){
+          ctx.fillStyle = inv.color;
+          ctx.fillRect(inv.x, inv.y, inv.width, inv.height);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(inv.x+5, inv.y+5, 3, 3);
+          ctx.fillRect(inv.x+17, inv.y+5, 3, 3);
+        }
+      });
+    }
+    function drawBullets(){
+      ctx.fillStyle = '#ffffff';
+      bullets.forEach(b=> ctx.fillRect(b.x,b.y,b.width,b.height));
+      ctx.fillStyle = '#ff3a3a';
+      enemyBullets.forEach(b=> ctx.fillRect(b.x,b.y,b.width,b.height));
+    }
+
+    // 移動
+    function moveBullets(){
+      bullets = bullets.filter(b=>{ b.y -= b.speed; return b.y > -12; });
+      enemyBullets = enemyBullets.filter(b=>{ b.y += b.speed; return b.y < canvas.height+12; });
+    }
+    function moveInvaders(){
+      let edgeHit = false;
+      invaders.forEach(inv=>{ if(inv.alive && (inv.x<=0 || inv.x>=canvas.width-inv.width)) edgeHit = true; });
+      if(edgeHit){ invaderDirection *= -1; invaders.forEach(inv=>{ if(inv.alive) inv.y += 12; }); }
+      invaders.forEach(inv=>{ if(inv.alive) inv.x += invaderSpeed * invaderDirection * (inv.speedMultiplier || 1); });
+    }
+
+    // 敵攻撃
+    function enemyShoot(){
+      if(Math.random() < enemyFireProb){
+        const alive = invaders.filter(i=>i.alive);
+        if(alive.length){
+          const s = alive[Math.floor(Math.random()*alive.length)];
+          enemyBullets.push({ x: s.x + s.width/2 - 2, y: s.y + s.height, width:4, height:8, speed: enemyBulletSpeed });
+        }
+      }
+    }
+
+    // 衝突
+    function checkCollisions(){
+      // 自弾 vs 敵
+      bullets.forEach((b,bi)=>{
+        invaders.forEach(inv=>{
+          if(inv.alive &&
+             b.x < inv.x + inv.width && b.x + b.width > inv.x &&
+             b.y < inv.y + inv.height && b.y + b.height > inv.y){
+            inv.alive = false;
+            bullets.splice(bi,1);
+            score += 10; updateDisplay();
+            playExplosion();
+          }
+        });
+      });
+      // 敵弾 vs 自機
+      enemyBullets.forEach((b,bi)=>{
+        if(b.x < player.x + player.width && b.x + b.width > player.x &&
+           b.y < player.y + player.height && b.y + b.height > player.y){
+          enemyBullets.splice(bi,1);
+          lives--; updateDisplay();
+          if(lives<=0) return gameOver();
+        }
+      });
+      // 侵入
+      invaders.forEach(inv=>{ if(inv.alive && inv.y + inv.height >= player.y) gameOver(); });
+    }
+
+    // 勝利判定
+    function checkWin(){
+      if(invaders.some(i=>i.alive)) return;
+      score += 100; updateDisplay();
+      playStageClearJingle();
+      if(currentStage < maxStages){
+        currentStage++;
+        setupDifficultyForStage();
+        setTimeout(()=>{
+          initStageOnly();
+          showStageBanner();
+          showMessage('……次の世界です');
+          startBgm(); // ステージに合わせてBGMのコード進行も更新
+        }, 700);
+      }else{
+        showEnding();
+      }
+    }
+
+    // ループ
+    function gameLoop(now=0){
+      if(!gameRunning) return;
+      drawBackground(now);
+      drawPlayer(); drawInvaders(); drawBullets();
+      moveBullets(); moveInvaders(); enemyShoot(); checkCollisions(); checkWin();
+      maybeHideStageBanner(now);
+      requestAnimationFrame(gameLoop);
+    }
+
+    // 入力
+    function movePlayer(dir){
+      if(dir==='left' && player.x>0) player.x -= player.speed;
+      if(dir==='right'&& player.x<canvas.width-player.width) player.x += player.speed;
+    }
+    function shoot(){
+      if(bullets.length < 3){
+        bullets.push({ x: player.x + player.width/2 - 2, y: player.y, width:4, height:10, speed:8 });
+        playShoot();
+      }
+    }
+    document.addEventListener('keydown', e=>{
+      if(!gameRunning) return;
+      if(e.code==='ArrowLeft')  movePlayer('left');
+      if(e.code==='ArrowRight') movePlayer('right');
+      if(e.code==='Space'){ e.preventDefault(); shoot(); }
+    });
+
+    let moveInterval, shootInterval;
+    function startMoving(d){ movePlayer(d); moveInterval = setInterval(()=>movePlayer(d), 50); }
+    function stopMoving(){ clearInterval(moveInterval); }
+    function startShooting(){ shoot(); shootInterval = setInterval(shoot, 120); }
+    function stopShooting(){ clearInterval(shootInterval); }
+
+    const leftBtn  = document.getElementById('leftBtn');
+    const rightBtn = document.getElementById('rightBtn');
+    const shootBtn = document.getElementById('shootBtn');
+
+    ['mousedown','touchstart'].forEach(ev=>{
+      leftBtn .addEventListener(ev, e=>{ e.preventDefault(); if(gameRunning) startMoving('left'); });
+      rightBtn.addEventListener(ev, e=>{ e.preventDefault(); if(gameRunning) startMoving('right'); });
+      shootBtn.addEventListener(ev, e=>{ e.preventDefault(); if(gameRunning) startShooting(); });
+    });
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>{
+      leftBtn .addEventListener(ev, e=>{ e.preventDefault(); stopMoving(); });
+      rightBtn.addEventListener(ev, e=>{ e.preventDefault(); stopMoving(); });
+      shootBtn.addEventListener(ev, e=>{ e.preventDefault(); stopShooting(); });
+    });
+
+    // 画面遷移
+    const openingEl = document.getElementById('opening');
+    const gameOverEl = document.getElementById('gameOver');
+    const endingEl   = document.getElementById('ending');
+
+    document.getElementById('startBtn').addEventListener('click', ()=>{
+      initAudio();
+      openingEl.classList.add('hidden');
+      showMessage('フミさん、敵が来ました', 1800);
+      startGame();
+      startBgm();
+    });
+    document.getElementById('restartBtn').addEventListener('click', ()=>{
+      gameOverEl.classList.add('hidden');
+      initAudio();
+      startGame();
+      startBgm();
+    });
+    document.getElementById('toTitleBtn').addEventListener('click', ()=>{
+      endingEl.classList.add('hidden');
+      openingEl.classList.remove('hidden');
+      gameRunning = false;
+      stopBgm();
+    });
+
+    function startGame(){
+      // 初期化
+      score = 0; lives = 3; currentStage = 1; invaderDirection = 1;
+      updateDisplay();
+      setupDifficultyForStage();
+      initStageOnly();
+      showStageBanner();
+      showMessage('ユウ、行きます');
+      gameRunning = true;
+      requestAnimationFrame(gameLoop);
+    }
+
+    function initStageOnly(){
+      // 敵編成（5x8・上段高速）
+      invaders = [];
+      for(let row=0; row<5; row++){
+        for(let col=0; col<8; col++){
+          const isFast = (row===0);
+          invaders.push({
+            x: col*45 + 50,
+            y: row*35 + 50,
+            width:25, height:20, alive:true,
+            speedMultiplier: isFast ? 2 : 1,
+            color: isFast ? '#ff00ff' : row<2 ? '#ff0000' : row<4 ? '#ffff00' : '#00ffff'
+          });
+        }
+      }
+      bullets = [];
+      enemyBullets = [];
+      player.x = canvas.width/2 - 15;
+      prepareStageBackground();
+      updateDisplay();
+    }
+
+    function gameOver(){
+      gameRunning = false;
+      document.getElementById('finalScore').textContent = score;
+      gameOverEl.classList.remove('hidden');
+      stopBgm();
+    }
+
+    function showEnding(){
+      gameRunning = false;
+      document.getElementById('clearScore').textContent = score;
+      endingEl.classList.remove('hidden');
+      stopBgm();
+    }
+  </script>
 </body>
 </html>
