@@ -6,7 +6,8 @@
 
 body {
     font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #0f0f23 0%, #1a1a3a 100%);
+    background: url('space-bg.svg') no-repeat center center fixed;
+    background-size: cover;
     color: white;
     min-height: 100vh;
     display: flex;
@@ -48,7 +49,7 @@ body {
 }
 
 #gameCanvas {
-    background: #000011;
+    background: transparent;
     border: 3px solid #00ff00;
     border-radius: 10px;
     box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
